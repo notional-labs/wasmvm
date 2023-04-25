@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tetratelabs/wazero"
 
 	"github.com/CosmWasm/wasmvm/internal/api/testdb"
 	"github.com/CosmWasm/wasmvm/types"
@@ -24,7 +25,7 @@ func (q queueData) Store(meter MockGasMeter) types.KVStore {
 	return q.store.WithGasMeter(meter)
 }
 
-func setupQueueContractWithData(t *testing.T, cache Cache, values ...int) queueData {
+func setupQueueContractWithData(t *testing.T, cache wazero.CompilationCache, values ...int) queueData {
 	checksum := createQueueContract(t, cache)
 
 	gasMeter1 := NewMockGasMeter(TESTING_GAS_LIMIT)
@@ -58,7 +59,7 @@ func setupQueueContractWithData(t *testing.T, cache Cache, values ...int) queueD
 	}
 }
 
-func setupQueueContract(t *testing.T, cache Cache) queueData {
+func setupQueueContract(t *testing.T, cache wazero.CompilationCache) queueData {
 	return setupQueueContractWithData(t, cache, 17, 22)
 }
 

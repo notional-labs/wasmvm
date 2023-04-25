@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tetratelabs/wazero"
 
 	"github.com/CosmWasm/wasmvm/types"
 )
@@ -870,23 +871,23 @@ func requireQueryOk(t *testing.T, res []byte) []byte {
 	return result.Ok
 }
 
-func createHackatomContract(t *testing.T, cache Cache) []byte {
+func createHackatomContract(t *testing.T, cache wazero.CompilationCache) []byte {
 	return createContract(t, cache, "../../testdata/hackatom.wasm")
 }
 
-func createCyberpunkContract(t *testing.T, cache Cache) []byte {
+func createCyberpunkContract(t *testing.T, cache wazero.CompilationCache) []byte {
 	return createContract(t, cache, "../../testdata/cyberpunk.wasm")
 }
 
-func createQueueContract(t *testing.T, cache Cache) []byte {
+func createQueueContract(t *testing.T, cache wazero.CompilationCache) []byte {
 	return createContract(t, cache, "../../testdata/queue.wasm")
 }
 
-func createReflectContract(t *testing.T, cache Cache) []byte {
+func createReflectContract(t *testing.T, cache wazero.CompilationCache) []byte {
 	return createContract(t, cache, "../../testdata/reflect.wasm")
 }
 
-func createContract(t *testing.T, cache Cache, wasmFile string) []byte {
+func createContract(t *testing.T, cache wazero.CompilationCache, wasmFile string) []byte {
 	wasm, err := ioutil.ReadFile(wasmFile)
 	require.NoError(t, err)
 	checksum, err := StoreCode(cache, wasm)
@@ -895,7 +896,7 @@ func createContract(t *testing.T, cache Cache, wasmFile string) []byte {
 }
 
 // exec runs the handle tx with the given signer
-func exec(t *testing.T, cache Cache, checksum []byte, signer types.HumanAddress, store types.KVStore, api *types.GoAPI, querier Querier, gasExpected uint64) types.ContractResult {
+func exec(t *testing.T, cache wazero.CompilationCache, checksum []byte, signer types.HumanAddress, store types.KVStore, api *types.GoAPI, querier Querier, gasExpected uint64) types.ContractResult {
 	gasMeter := NewMockGasMeter(TESTING_GAS_LIMIT)
 	igasMeter := types.GasMeter(gasMeter)
 	env := MockEnvBin(t)

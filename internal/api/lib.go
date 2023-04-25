@@ -1,7 +1,9 @@
 package api
 
-// #include <stdlib.h>
-// #include "bindings.h"
+// notes:
+// The original version seems to identify contracts by their checksum, if we want this we will need to build it.
+// wazero uses context to track which contract is which.  Pin is implemented in rust, probably in https://github.com/CosmWasm/cosmwasm
+// this file was much more useful than the rest of the docs: https://github.com/tetratelabs/wazero/blob/main/cache_example_test.go
 
 import (
 	"context"
@@ -16,49 +18,33 @@ import (
 type Querier = types.Querier
 
 func InitCache(dataDir string, supportedCapabilities string, cacheSize uint32, instanceMemoryLimit uint32) (wazero.CompilationCache, error) {
-	dataDirBytes := []byte(dataDir)
-	supportedCapabilitiesBytes := []byte(supportedCapabilities)
 
-	d := makeView(dataDirBytes)
-	defer runtime.KeepAlive(dataDirBytes)
-	capabilitiesView := makeView(supportedCapabilitiesBytes)
-	defer runtime.KeepAlive(supportedCapabilitiesBytes)
-
-	errmsg := uninitializedUnmanagedVector()
-
-	cache := wazero.NewCompilationCache(d, capabilitiesView, cacheSize, instanceMemoryLimit, &errmsg)
-
-	return cache, nil
+	cache, err := wazero.NewCompilationCacheWithDir(dataDir)
+	defer cache.Close(context.Background())
+	return cache, err
 }
 
 func ReleaseCache(ctx context.Context, cache wazero.CompilationCache) {
-
 	cache.Close(ctx)
 }
 
-func StoreCode(cache Cache, wasm []byte) ([]byte, error) {
-	w := makeView(wasm)
-	defer runtime.KeepAlive(wasm)
-	errmsg := uninitializedUnmanagedVector()
-	checksum, err := C.save_wasm(cache.ptr, w, &errmsg)
-	if err != nil {
-		return nil, errorWithMessage(err, errmsg)
-	}
-	return copyAndDestroyUnmanagedVector(checksum), nil
+func StoreCode(ctx context.Context, cache wazero.CompilationCache, wasm []byte) (wazero.CompiledModule, error) {
+	config := wazero.NewRuntimeConfig().WithCompilationCache(cache)
+	r := wazero.NewRuntimeWithConfig(ctx, config)
+
+	defer r.Close(ctx) // This closes everything this Runtime created except the file system cache.
+	module, err := r.CompileModule(ctx, wasm)
+
+	return module, err
 }
 
-func RemoveCode(cache Cache, checksum []byte) error {
-	cs := makeView(checksum)
-	defer runtime.KeepAlive(checksum)
-	errmsg := uninitializedUnmanagedVector()
-	_, err := C.remove_wasm(cache.ptr, cs, &errmsg)
-	if err != nil {
-		return errorWithMessage(err, errmsg)
-	}
-	return nil
+func RemoveCode(ctx context.Context, cache wazero.CompilationCache, checksum []byte) error {
+	err := cache.Close(ctx)
+
+	return err
 }
 
-func GetCode(cache Cache, checksum []byte) ([]byte, error) {
+func GetCode(cache wazero.CompilationCache, checksum []byte) ([]byte, error) {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
 	errmsg := uninitializedUnmanagedVector()
@@ -69,7 +55,7 @@ func GetCode(cache Cache, checksum []byte) ([]byte, error) {
 	return copyAndDestroyUnmanagedVector(wasm), nil
 }
 
-func Pin(cache Cache, checksum []byte) error {
+func Pin(cache wazero.CompilationCache, checksum []byte) error {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
 	errmsg := uninitializedUnmanagedVector()
@@ -80,7 +66,7 @@ func Pin(cache Cache, checksum []byte) error {
 	return nil
 }
 
-func Unpin(cache Cache, checksum []byte) error {
+func Unpin(cache wazero.CompilationCache, checksum []byte) error {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
 	errmsg := uninitializedUnmanagedVector()
@@ -91,7 +77,7 @@ func Unpin(cache Cache, checksum []byte) error {
 	return nil
 }
 
-func AnalyzeCode(cache Cache, checksum []byte) (*types.AnalysisReport, error) {
+func AnalyzeCode(cache wazero.CompilationCache, checksum []byte) (*types.AnalysisReport, error) {
 	cs := makeView(checksum)
 	defer runtime.KeepAlive(checksum)
 	errmsg := uninitializedUnmanagedVector()
@@ -108,7 +94,7 @@ func AnalyzeCode(cache Cache, checksum []byte) (*types.AnalysisReport, error) {
 	return &res, nil
 }
 
-func GetMetrics(cache Cache) (*types.Metrics, error) {
+func GetMetrics(cache wazero.CompilationCache) (*types.Metrics, error) {
 	errmsg := uninitializedUnmanagedVector()
 	metrics, err := C.get_metrics(cache.ptr, &errmsg)
 	if err != nil {
@@ -128,7 +114,7 @@ func GetMetrics(cache Cache) (*types.Metrics, error) {
 }
 
 func Instantiate(
-	cache Cache,
+	cache wazero.CompilationCache,
 	checksum []byte,
 	env []byte,
 	info []byte,
@@ -168,7 +154,7 @@ func Instantiate(
 }
 
 func Execute(
-	cache Cache,
+	cache wazero.CompilationCache,
 	checksum []byte,
 	env []byte,
 	info []byte,
@@ -208,7 +194,7 @@ func Execute(
 }
 
 func Migrate(
-	cache Cache,
+	cache wazero.CompilationCache,
 	checksum []byte,
 	env []byte,
 	msg []byte,
@@ -245,7 +231,7 @@ func Migrate(
 }
 
 func Sudo(
-	cache Cache,
+	cache wazero.CompilationCache,
 	checksum []byte,
 	env []byte,
 	msg []byte,
@@ -282,7 +268,7 @@ func Sudo(
 }
 
 func Reply(
-	cache Cache,
+	cache wazero.CompilationCache,
 	checksum []byte,
 	env []byte,
 	reply []byte,
@@ -319,7 +305,7 @@ func Reply(
 }
 
 func Query(
-	cache Cache,
+	cache wazero.CompilationCache,
 	checksum []byte,
 	env []byte,
 	msg []byte,
@@ -356,7 +342,7 @@ func Query(
 }
 
 func IBCChannelOpen(
-	cache Cache,
+	cache wazero.CompilationCache,
 	checksum []byte,
 	env []byte,
 	msg []byte,
@@ -393,7 +379,7 @@ func IBCChannelOpen(
 }
 
 func IBCChannelConnect(
-	cache Cache,
+	cache wazero.CompilationCache,
 	checksum []byte,
 	env []byte,
 	msg []byte,
@@ -430,7 +416,7 @@ func IBCChannelConnect(
 }
 
 func IBCChannelClose(
-	cache Cache,
+	cache wazero.CompilationCache,
 	checksum []byte,
 	env []byte,
 	msg []byte,
@@ -467,7 +453,7 @@ func IBCChannelClose(
 }
 
 func IBCPacketReceive(
-	cache Cache,
+	cache wazero.CompilationCache,
 	checksum []byte,
 	env []byte,
 	packet []byte,
@@ -504,7 +490,7 @@ func IBCPacketReceive(
 }
 
 func IBCPacketAck(
-	cache Cache,
+	cache wazero.CompilationCache,
 	checksum []byte,
 	env []byte,
 	ack []byte,
@@ -541,7 +527,7 @@ func IBCPacketAck(
 }
 
 func IBCPacketTimeout(
-	cache Cache,
+	cache wazero.CompilationCache,
 	checksum []byte,
 	env []byte,
 	packet []byte,
