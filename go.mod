@@ -5,6 +5,7 @@ go 1.18
 require (
 	github.com/google/btree v1.0.0
 	github.com/stretchr/testify v1.8.1
+	github.com/tetratelabs/wazero v1.0.3
 )
 
 require (

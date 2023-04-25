@@ -2,41 +2,20 @@ package api
 
 // #include <stdlib.h>
 // #include "bindings.h"
-import "C"
 
 import (
+	"context"
 	"fmt"
 	"runtime"
 	"syscall"
 
 	"github.com/CosmWasm/wasmvm/types"
+	"github.com/tetratelabs/wazero"
 )
-
-// Value types
-type (
-	cint   = C.int
-	cbool  = C.bool
-	cusize = C.size_t
-	cu8    = C.uint8_t
-	cu32   = C.uint32_t
-	cu64   = C.uint64_t
-	ci8    = C.int8_t
-	ci32   = C.int32_t
-	ci64   = C.int64_t
-)
-
-// Pointers
-type (
-	cu8_ptr = *C.uint8_t
-)
-
-type Cache struct {
-	ptr *C.cache_t
-}
 
 type Querier = types.Querier
 
-func InitCache(dataDir string, supportedCapabilities string, cacheSize uint32, instanceMemoryLimit uint32) (Cache, error) {
+func InitCache(dataDir string, supportedCapabilities string, cacheSize uint32, instanceMemoryLimit uint32) (wazero.CompilationCache, error) {
 	dataDirBytes := []byte(dataDir)
 	supportedCapabilitiesBytes := []byte(supportedCapabilities)
 
@@ -47,15 +26,14 @@ func InitCache(dataDir string, supportedCapabilities string, cacheSize uint32, i
 
 	errmsg := uninitializedUnmanagedVector()
 
-	ptr, err := C.init_cache(d, capabilitiesView, cu32(cacheSize), cu32(instanceMemoryLimit), &errmsg)
-	if err != nil {
-		return Cache{}, errorWithMessage(err, errmsg)
-	}
-	return Cache{ptr: ptr}, nil
+	cache := wazero.NewCompilationCache(d, capabilitiesView, cacheSize, instanceMemoryLimit, &errmsg)
+
+	return cache, nil
 }
 
-func ReleaseCache(cache Cache) {
-	C.release_cache(cache.ptr)
+func ReleaseCache(ctx context.Context, cache wazero.CompilationCache) {
+
+	cache.Close(ctx)
 }
 
 func StoreCode(cache Cache, wasm []byte) ([]byte, error) {
