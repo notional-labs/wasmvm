@@ -5,6 +5,7 @@
 package cosmwasm
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -37,8 +38,8 @@ func NewVM(dataDir string, supportedCapabilities string, memoryLimit uint32, pri
 }
 
 // Cleanup should be called when no longer using this to free resources on the rust-side
-func (vm *VM) Cleanup() {
-	api.ReleaseCache(vm.cache)
+func (vm *VM) Cleanup(ctx context.Context) {
+	api.ReleaseCache(ctx, vm.cache)
 }
 
 // Deprecated: Renamed to StoreCode
@@ -56,8 +57,8 @@ func (vm *VM) Create(code WasmCode) (Checksum, error) {
 // be instantiated with custom inputs in the future.
 //
 // TODO: return gas cost? Add gas limit??? there is no metering here...
-func (vm *VM) StoreCode(code WasmCode) (Checksum, error) {
-	return api.StoreCode(vm.cache, code)
+func (vm *VM) StoreCode(ctx context.Context, code WasmCode) (Checksum, error) {
+	return api.StoreCode(ctx, vm.cache, code)
 }
 
 func (vm *VM) RemoveCode(checksum Checksum) error {
