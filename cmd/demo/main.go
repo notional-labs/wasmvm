@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -44,7 +45,9 @@ func main() {
 		panic(err)
 	}
 
-	checksum, err := vm.StoreCode(bz)
+	context := context.Background()
+
+	checksum, err := vm.StoreCode(context, bz)
 	if err != nil {
 		panic(err)
 	}

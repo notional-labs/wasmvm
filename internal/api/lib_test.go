@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -28,10 +29,11 @@ func TestInitAndReleaseCache(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "wasmvm-testing")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
+	ctx := context.Background()
 
 	cache, err := InitCache(tmpdir, TESTING_CAPABILITIES, TESTING_CACHE_SIZE, TESTING_MEMORY_LIMIT)
 	require.NoError(t, err)
-	ReleaseCache(cache)
+	ReleaseCache(ctx, cache)
 }
 
 // wasmd expects us to create the base directory

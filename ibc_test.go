@@ -3,6 +3,7 @@
 package cosmwasm
 
 import (
+	"context"
 	"encoding/json"
 	"io/ioutil"
 	"testing"
@@ -279,11 +280,12 @@ func TestIBCPacketDispatch(t *testing.T) {
 
 func TestAnalyzeCode(t *testing.T) {
 	vm := withVM(t)
+	ctx := context.Background()
 
 	// Store non-IBC contract
 	wasm, err := ioutil.ReadFile(HACKATOM_TEST_CONTRACT)
 	require.NoError(t, err)
-	checksum, err := vm.StoreCode(wasm)
+	checksum, err := vm.StoreCode(ctx, wasm)
 	require.NoError(t, err)
 	// and analyze
 	report, err := vm.AnalyzeCode(checksum)
